@@ -1,6 +1,29 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-   
+
+## Code decisions
+* Use another class to implement behaviour planner part required for lane changes. It does help simplify the code a lot. I could have done the same thing with path planner. Maybe a future implementation.
+* Tried to keep camelCase style of new variable names.
+
+
+## Challenges
+* Modifications in CMakeLists.txt required if I want to use ccmake to generate the make file properly. As described above that a helper class file for behaviour planner was created and to use it with proper C++ code styling CMakeLists.txt was appended as 'set(sources src/main.cpp src/behaviourPlanner.cpp)'
+
+* The walkthrough video did help a lot for understanding how to implement the spline curve for changing lanes. It took some time to understand following things though:
+ - Why we do such a long calculations just to add 1 to 2 new points in the path.
+ - Convert to frenet coordinates and back for easier addition of path points.
+ - Calculate how to break up the points so that the average speed is near to target speed
+
+* Implementation of behaviour planner took a great amount of time. Especially in following situations:
+ - Deciding on which scenarios should be penalized and which shouldn't. (check 'BehaviourPlanner::decideLaneAndSpeed' method in behaviourPlanner.cpp)
+ - How to avoid quick lane changes (check line 278 to 283 in main.cpp)
+
+
+## Next Steps
+* Change lane with Bezier curve instead of Spline. I believe Bezier curve represents more realistic human like lane changing.
+* Challenge myself to write an algorithm for optimised lane changing algorithm to get quicker around the track. Use state machines.
+
+
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).
 

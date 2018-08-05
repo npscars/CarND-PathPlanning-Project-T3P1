@@ -8,7 +8,7 @@ using namespace std;
 
 class BehaviourPlanner {
   public:
-    int counter_lane_change = 0;
+    int counterLaneChange = 0;
     
     //Constructor
     BehaviourPlanner();
@@ -23,7 +23,7 @@ class BehaviourPlanner {
     float distanceCalc(int path_size, double speed, double s);
     
     // final lane the vehicle should move to and speed reduction if required
-    vector<float> decideLaneAndSpeed(int lane, vector<int> other_car_lane, double position, vector<double> other_car_futureDistance);
+    vector<float> decideLaneAndSpeed(int lane, vector<int> otherCarLane, double position, vector<double> otherCarFutureDistance);
    
 };
 

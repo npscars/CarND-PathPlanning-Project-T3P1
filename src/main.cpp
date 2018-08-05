@@ -248,24 +248,24 @@ int main() {
             json msgJson;
 
             // Needed as if the car has passed one/two points then the size of the previous points will be 49/48.
-            int previous_path_size = previous_path_x.size();
+            int previousPathSize = previous_path_x.size();
 
             /// SENSOR FUSION Lane and Speed detection -- Done in Frenet coordinates
-            if (previous_path_size > 0) { car_s = end_path_s;} // to make it representative of previous path point s
+            if (previousPathSize > 0) { car_s = end_path_s;} // to make it representative of previous path point s
             // output of behaviour planner should be target lane and target speed.
-            vector<int> other_car_currentLane;
-            vector<double> other_car_futureDistance; 
+            vector<int> otherCarCurrentLane;
+            vector<double> otherCarFutureDistance; 
             //vector<bool> other_car_proximity;
             for (int i = 0; i < sensor_fusion.size(); i++){
                 float d = sensor_fusion[i][6];
-                other_car_currentLane.push_back(bp.laneCalc(d));
+                otherCarCurrentLane.push_back(bp.laneCalc(d));
                 double vx = sensor_fusion[i][3];
                 double vy = sensor_fusion[i][4];
                 double s = sensor_fusion[i][5];
                 double other_car_currentSpeed = sqrt(vx*vx + vy*vy);
-                other_car_futureDistance.push_back(bp.distanceCalc(previous_path_size,other_car_currentSpeed,s));
+                otherCarFutureDistance.push_back(bp.distanceCalc(previousPathSize,other_car_currentSpeed,s));
             }
-            vector<float> laneAndSpeed = bp.decideLaneAndSpeed(lane, other_car_currentLane, car_s, other_car_futureDistance);
+            vector<float> laneAndSpeed = bp.decideLaneAndSpeed(lane, otherCarCurrentLane, car_s, otherCarFutureDistance);
             cout << laneAndSpeed[0] << ","<< laneAndSpeed[1] << ","<< laneAndSpeed[2] << ","<< laneAndSpeed[3] << endl;
             if (laneAndSpeed[3] >= 0 && ref_vel < 49.5) {
                 ref_vel += 0.225;
@@ -273,37 +273,38 @@ int main() {
                 ref_vel -= 0.225;
             }
             // favours left most lane due to how max_element is calculated if same values are returned, its okay as high speed is leftmost lane
-            int possible_lane = max_element(laneAndSpeed.begin(),laneAndSpeed.end()-1)-laneAndSpeed.begin();
+            int possibleLane = max_element(laneAndSpeed.begin(),laneAndSpeed.end()-1)-laneAndSpeed.begin();
             // to avoid too quick one after the other lane manevours and also no lane maneouvre direct from 1st lane to third and vice versa
-            if (possible_lane != lane && bp.counter_lane_change > 200 && abs(possible_lane - lane)==1){
-                bp.counter_lane_change = 0;
-                lane = possible_lane;
+            if (possibleLane != lane && bp.counterLaneChange > 200 && abs(possibleLane - lane)==1){
+                bp.counterLaneChange = 0;
+                lane = possibleLane;
             } else {
-                bp.counter_lane_change++;
+                bp.counterLaneChange++;
             }
-            cout <<"---> " <<bp.counter_lane_change << " <---" << endl;
-            cout << "Suggested lane :  " << lane << endl;
             
-            vector<bool> are_other_car_inlane;
-            vector<float> are_other_cars_around;
+            // Visual checking of vehicles around in terminal
+            cout <<"---> " <<bp.counterLaneChange << " <---" << endl;
+            cout << "Suggested lane :  " << lane << endl;
+            vector<bool> areOtherCarInLane;
+            vector<float> areOtherCarsAround;
             cout<<"------------------"<<endl;
             for (int i = 0; i < sensor_fusion.size(); i++){
                 float d = sensor_fusion[i][6];
-                are_other_car_inlane.push_back(d < (2+4*lane+2) && d > (2+4*lane-2));
+                areOtherCarInLane.push_back(d < (2+4*lane+2) && d > (2+4*lane-2));
                 double vx = sensor_fusion[i][3];
                 double vy = sensor_fusion[i][4];
                 double speed_of_car = std::sqrt(vx*vx+vy*vy);
-                double distance_of_car_in_future = ((previous_path_size*0.02*speed_of_car)+(double)sensor_fusion[i][5]);
-                are_other_cars_around.push_back((distance_of_car_in_future - car_s > -30 ) && (distance_of_car_in_future - car_s < 30)); // independent of lane
-                cout<< are_other_car_inlane[i] << " , " << d << " , " << are_other_cars_around[i] << " distance = " << distance_of_car_in_future-car_s <<endl;
+                double distanceOfCarInFuture = ((previousPathSize*0.02*speed_of_car)+(double)sensor_fusion[i][5]);
+                areOtherCarsAround.push_back((distanceOfCarInFuture - car_s > -30 ) && (distanceOfCarInFuture - car_s < 30)); // independent of lane
+                cout<< areOtherCarInLane[i] << " , " << d << " , " << areOtherCarsAround[i] << " distance = " << distanceOfCarInFuture-car_s <<endl;
             }
             cout<<"------------------"<<endl;
 
             vector<double> next_x_vals;
             vector<double> next_y_vals;
-            cout << "path size: "<< previous_path_size << " :path size"<<endl;
+            cout << "path size: "<< previousPathSize << " :path size"<<endl;
             // Add previous path points as a starting points to make it smooth transition
-            for (int i = 0; i < previous_path_size; i++){
+            for (int i = 0; i < previousPathSize; i++){
                 next_x_vals.push_back(previous_path_x[i]);
                 next_y_vals.push_back(previous_path_y[i]);
             }
@@ -318,7 +319,7 @@ int main() {
             double ref_path_yaw = deg2rad(car_yaw); // as output from simulator is in degrees
 
             // if not enough data available like at start then use car's current position as starting reference
-            if (previous_path_size < 2){
+            if (previousPathSize < 2){
                 double prev_car_x = car_x - cos(deg2rad(car_yaw));
                 double prev_car_y = car_y - sin(deg2rad(car_yaw));
                 // need minimum 2 points to create a path
@@ -328,10 +329,10 @@ int main() {
                 ptsy.push_back(car_y);
             }
             else { // if enough previous points use last two path points to car as next start position
-                ref_path_x = previous_path_x[previous_path_size - 1]; // just passed
-                ref_path_y = previous_path_y[previous_path_size - 1];
-                double prev_ref_path_x = previous_path_x[previous_path_size - 2]; // one before
-                double prev_ref_path_y = previous_path_y[previous_path_size - 2];
+                ref_path_x = previous_path_x[previousPathSize - 1]; // just passed
+                ref_path_y = previous_path_y[previousPathSize - 1];
+                double prev_ref_path_x = previous_path_x[previousPathSize - 2]; // one before
+                double prev_ref_path_y = previous_path_y[previousPathSize - 2];
                 ref_path_yaw = atan2(ref_path_y-prev_ref_path_y, ref_path_x - prev_ref_path_x);
                 // need minimum 2 points to create a path
                 ptsx.push_back(prev_ref_path_x);
@@ -345,7 +346,7 @@ int main() {
             // Using Frenet coordinates helps to easily add points.
             vector<double> next_wp0 = getXY(car_s+30,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y); // 30m ahead in same lane of current car position in frenet
             vector<double> next_wp1 = getXY(car_s+90,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y); // 60m ahead in frenet
-            //vector<double> next_wp2 = getXY(car_s+150,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y); // 90m ahead in frenet
+            //vector<double> next_wp2 = getXY(car_s+150,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y); // 90m ahead in frenet -- not really needed
             // add to the coarse path points
             ptsx.push_back(next_wp0[0]);
             ptsx.push_back(next_wp1[0]);
@@ -376,7 +377,7 @@ int main() {
 
             //fill in the rest of the path after filling the previous points, here we need to make sure that we add exactly 50 points
             double x_add_on = 0;
-            for (int i = 1; i <= 50-previous_path_size; i++){
+            for (int i = 1; i <= 50-previousPathSize; i++){
 
                 double N = target_dist/((ref_vel*1.609/3.6)*0.02); //0.02 is timestep and ref_vel is in miles per hour
                 double x_point = x_add_on + target_x/N;
